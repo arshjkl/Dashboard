@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
@@ -7,6 +6,109 @@ function canManage(roles: string[]) {
   return (
     roles.includes("OWNER") ||
     roles.includes("MANAGER")
+  );
+}
+
+/*
+ * Tournament form times are entered as
+ * India Standard Time (Asia/Kolkata).
+ *
+ * Example:
+ * 2026-08-25T20:20
+ *
+ * means:
+ * 25 August 2026, 8:20 PM IST
+ *
+ * PostgreSQL stores the corresponding UTC instant.
+ */
+
+const INDIA_OFFSET_MINUTES = 330;
+
+function parseIndiaDate(
+  value: string | null | undefined
+): Date | null {
+  if (
+    typeof value !== "string" ||
+    !value.trim()
+  ) {
+    return null;
+  }
+
+  const input = value.trim();
+
+  /*
+   * If a timezone is already included,
+   * respect it.
+   */
+  if (
+    /Z$/i.test(input) ||
+    /[+-]\d{2}:\d{2}$/.test(input)
+  ) {
+    const date = new Date(input);
+
+    return Number.isNaN(date.getTime())
+      ? null
+      : date;
+  }
+
+  /*
+   * datetime-local format:
+   *
+   * YYYY-MM-DDTHH:mm
+   *
+   * Optional seconds are supported too.
+   */
+  const match = input.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(
+    match[6] || "0"
+  );
+
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59
+  ) {
+    return null;
+  }
+
+  /*
+   * Convert IST → UTC.
+   *
+   * 20:20 IST
+   * - 5:30
+   * = 14:50 UTC
+   */
+  return new Date(
+    Date.UTC(
+      year,
+      month - 1,
+      day,
+      hour,
+      minute,
+      second
+    ) -
+      INDIA_OFFSET_MINUTES *
+        60 *
+        1000
   );
 }
 
@@ -25,30 +127,35 @@ export async function GET(
   context: RouteContext
 ) {
   try {
-    const session = await getSession();
+    const session =
+      await getSession();
 
     if (!session) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication required.",
+          error:
+            "Authentication required.",
         },
         { status: 401 }
       );
     }
 
-    const { id } = await context.params;
+    const { id } =
+      await context.params;
 
     const tournament =
       await db.tournament.findFirst({
         where: {
           id,
-          teamId: session.teamId,
+          teamId:
+            session.teamId,
         },
         include: {
           rounds: {
             orderBy: {
-              roundNumber: "asc",
+              roundNumber:
+                "asc",
             },
           },
         },
@@ -58,7 +165,8 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: "Tournament not found.",
+          error:
+            "Tournament not found.",
         },
         { status: 404 }
       );
@@ -94,19 +202,25 @@ export async function PATCH(
   context: RouteContext
 ) {
   try {
-    const session = await getSession();
+    const session =
+      await getSession();
 
     if (!session) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication required.",
+          error:
+            "Authentication required.",
         },
         { status: 401 }
       );
     }
 
-    if (!canManage(session.roles)) {
+    if (
+      !canManage(
+        session.roles
+      )
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -117,13 +231,15 @@ export async function PATCH(
       );
     }
 
-    const { id } = await context.params;
+    const { id } =
+      await context.params;
 
     const existing =
       await db.tournament.findFirst({
         where: {
           id,
-          teamId: session.teamId,
+          teamId:
+            session.teamId,
         },
       });
 
@@ -131,15 +247,18 @@ export async function PATCH(
       return NextResponse.json(
         {
           success: false,
-          error: "Tournament not found.",
+          error:
+            "Tournament not found.",
         },
         { status: 404 }
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
-    const action = body.action;
+    const action =
+      body.action;
 
     /* ================================================ */
     /* MARK LIVE */
@@ -166,7 +285,8 @@ export async function PATCH(
 
       return NextResponse.json({
         success: true,
-        tournament: updated,
+        tournament:
+          updated,
       });
     }
 
@@ -174,17 +294,23 @@ export async function PATCH(
     /* COMPLETE */
     /* ================================================ */
 
-    if (action === "complete") {
-      const position = Number(
-        body.finalPosition
-      );
+    if (
+      action === "complete"
+    ) {
+      const position =
+        Number(
+          body.finalPosition
+        );
 
-      const points = Number(
-        body.totalPoints
-      );
+      const points =
+        Number(
+          body.totalPoints
+        );
 
       if (
-        !Number.isInteger(position) ||
+        !Number.isInteger(
+          position
+        ) ||
         position < 1
       ) {
         return NextResponse.json(
@@ -198,7 +324,9 @@ export async function PATCH(
       }
 
       if (
-        !Number.isFinite(points) ||
+        !Number.isFinite(
+          points
+        ) ||
         points < 0
       ) {
         return NextResponse.json(
@@ -217,9 +345,12 @@ export async function PATCH(
             id,
           },
           data: {
-            status: "COMPLETED",
-            finalPosition: position,
-            totalPoints: points,
+            status:
+              "COMPLETED",
+            finalPosition:
+              position,
+            totalPoints:
+              points,
           },
           include: {
             rounds: {
@@ -233,7 +364,8 @@ export async function PATCH(
 
       return NextResponse.json({
         success: true,
-        tournament: updated,
+        tournament:
+          updated,
       });
     }
 
@@ -241,24 +373,35 @@ export async function PATCH(
     /* QUALIFY FOR NEXT ROUND */
     /* ================================================ */
 
-    if (action === "qualify") {
+    if (
+      action === "qualify"
+    ) {
       const roundName =
         typeof body.roundName ===
         "string"
           ? body.roundName.trim()
           : "";
 
+      /*
+       * IMPORTANT:
+       * datetime-local values are interpreted
+       * explicitly as IST.
+       */
       const startAt =
         typeof body.startAt ===
         "string"
-          ? new Date(body.startAt)
+          ? parseIndiaDate(
+              body.startAt
+            )
           : null;
 
       const endAt =
         typeof body.endAt ===
           "string" &&
         body.endAt.length > 0
-          ? new Date(body.endAt)
+          ? parseIndiaDate(
+              body.endAt
+            )
           : null;
 
       const slotNumber =
@@ -278,7 +421,8 @@ export async function PATCH(
       const roomId =
         typeof body.roomId ===
         "string"
-          ? body.roomId.trim() || null
+          ? body.roomId.trim() ||
+            null
           : null;
 
       const roomPassword =
@@ -349,10 +493,12 @@ export async function PATCH(
         await db.tournamentRound.findFirst(
           {
             where: {
-              tournamentId: id,
+              tournamentId:
+                id,
             },
             orderBy: {
-              roundNumber: "desc",
+              roundNumber:
+                "desc",
             },
           }
         );
@@ -370,7 +516,8 @@ export async function PATCH(
                   data: {
                     tournamentId:
                       id,
-                    name: roundName,
+                    name:
+                      roundName,
                     roundNumber:
                       nextRoundNumber,
                     startAt,
@@ -389,7 +536,8 @@ export async function PATCH(
                   id,
                 },
                 data: {
-                  status: "QUALIFIED",
+                  status:
+                    "QUALIFIED",
                 },
                 include: {
                   rounds: {
@@ -402,7 +550,8 @@ export async function PATCH(
               });
 
             return {
-              tournament: updated,
+              tournament:
+                updated,
               round,
             };
           }
@@ -419,11 +568,12 @@ export async function PATCH(
 
     /* ================================================ */
     /* EDIT */
-    /* ================================================ */
+/* ================================================ */
 
     if (action === "edit") {
       const name =
-        typeof body.name === "string"
+        typeof body.name ===
+        "string"
           ? body.name.trim()
           : existing.name;
 
@@ -441,17 +591,26 @@ export async function PATCH(
             null
           : existing.description;
 
+      /*
+       * IMPORTANT:
+       * datetime-local values are interpreted
+       * explicitly as IST.
+       */
       const startAt =
         typeof body.startAt ===
         "string"
-          ? new Date(body.startAt)
+          ? parseIndiaDate(
+              body.startAt
+            )
           : existing.startAt;
 
       const endAt =
         typeof body.endAt ===
         "string"
           ? body.endAt.length > 0
-            ? new Date(body.endAt)
+            ? parseIndiaDate(
+                body.endAt
+              )
             : null
           : existing.endAt;
 
@@ -472,7 +631,8 @@ export async function PATCH(
       const roomId =
         typeof body.roomId ===
         "string"
-          ? body.roomId.trim() || null
+          ? body.roomId.trim() ||
+            null
           : existing.roomId;
 
       const roomPassword =
@@ -494,6 +654,7 @@ export async function PATCH(
       }
 
       if (
+        !startAt ||
         Number.isNaN(
           startAt.getTime()
         )
@@ -573,7 +734,8 @@ export async function PATCH(
 
       return NextResponse.json({
         success: true,
-        tournament: updated,
+        tournament:
+          updated,
       });
     }
 
@@ -602,24 +764,34 @@ export async function PATCH(
   }
 }
 
+/* ================================================== */
+/* DELETE TOURNAMENT */
+/* ================================================== */
+
 export async function DELETE(
   request: Request,
   context: RouteContext
 ) {
   try {
-    const session = await getSession();
+    const session =
+      await getSession();
 
     if (!session) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication required.",
+          error:
+            "Authentication required.",
         },
         { status: 401 }
       );
     }
 
-    if (!canManage(session.roles)) {
+    if (
+      !canManage(
+        session.roles
+      )
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -630,13 +802,15 @@ export async function DELETE(
       );
     }
 
-    const { id } = await context.params;
+    const { id } =
+      await context.params;
 
     const existing =
       await db.tournament.findFirst({
         where: {
           id,
-          teamId: session.teamId,
+          teamId:
+            session.teamId,
         },
         select: {
           id: true,
@@ -648,17 +822,21 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: "Tournament not found.",
+          error:
+            "Tournament not found.",
         },
         { status: 404 }
       );
     }
 
     /*
-     * Delete is intentionally restricted to
-     * completed tournaments.
+     * Delete is intentionally restricted
+     * to completed tournaments.
      */
-    if (existing.status !== "COMPLETED") {
+    if (
+      existing.status !==
+      "COMPLETED"
+    ) {
       return NextResponse.json(
         {
           success: false,
