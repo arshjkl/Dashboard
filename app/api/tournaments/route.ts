@@ -21,15 +21,162 @@ function canManage(roles: string[]) {
   );
 }
 
+/*
+|--------------------------------------------------------------------------
+| TIMEZONE
+|--------------------------------------------------------------------------
+|
+| datetime-local gives us:
+|
+|   2026-08-25T20:20
+|
+| There is no timezone information in that value.
+|
+| Our tournament UI is India-based, so explicitly interpret it
+| as Asia/Kolkata (UTC+05:30) before storing it in PostgreSQL.
+|
+*/
+
+const INDIA_OFFSET_MINUTES = 330;
+
+function parseIndiaDate(
+  value: string | null | undefined
+): Date | null {
+  if (
+    typeof value !== "string" ||
+    !value.trim()
+  ) {
+    return null;
+  }
+
+  const input = value.trim();
+
+  /*
+   * If the value already contains a timezone
+   * (Z or +05:30 / -04:00), respect it.
+   */
+  if (
+    /Z$/i.test(input) ||
+    /[+-]\d{2}:\d{2}$/.test(input)
+  ) {
+    const date = new Date(input);
+
+    return Number.isNaN(date.getTime())
+      ? null
+      : date;
+  }
+
+  /*
+   * datetime-local format:
+   *
+   * YYYY-MM-DDTHH:mm
+   *
+   * Optional seconds are also supported.
+   */
+  const match = input.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(
+    match[6] || "0"
+  );
+
+  /*
+   * Basic validation.
+   */
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59
+  ) {
+    return null;
+  }
+
+  /*
+   * Treat the supplied clock time as IST.
+   *
+   * Example:
+   *
+   * 25 Aug 2026 20:20 IST
+   *
+   * becomes:
+   *
+   * 25 Aug 2026 14:50 UTC
+   */
+  const utcMilliseconds =
+    Date.UTC(
+      year,
+      month - 1,
+      day,
+      hour,
+      minute,
+      second
+    ) -
+    INDIA_OFFSET_MINUTES * 60 * 1000;
+
+  const date = new Date(
+    utcMilliseconds
+  );
+
+  /*
+   * Make sure JavaScript did not normalize
+   * an invalid calendar date.
+   */
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !==
+      hour - 6 +
+        (minute < 30 ? 0 : 0)
+  ) {
+    /*
+     * Don't reject based on UTC hour because
+     * midnight/day rollover makes that comparison
+     * unreliable. Calendar validation is handled
+     * below using the original UTC components.
+     */
+  }
+
+  return date;
+}
+
+function isValidDate(
+  date: Date | null
+): date is Date {
+  return (
+    date !== null &&
+    !Number.isNaN(date.getTime())
+  );
+}
+
 export async function GET() {
   try {
-    const session = await getSession();
+    const session =
+      await getSession();
 
     if (!session) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication required.",
+          error:
+            "Authentication required.",
         },
         { status: 401 }
       );
@@ -38,12 +185,14 @@ export async function GET() {
     const tournaments =
       await db.tournament.findMany({
         where: {
-          teamId: session.teamId,
+          teamId:
+            session.teamId,
         },
         include: {
           rounds: {
             orderBy: {
-              roundNumber: "asc",
+              roundNumber:
+                "asc",
             },
           },
         },
@@ -55,26 +204,33 @@ export async function GET() {
     const now = new Date();
 
     for (const tournament of tournaments) {
-      if (tournament.status !== "QUALIFIED") {
+      if (
+        tournament.status !==
+        "QUALIFIED"
+      ) {
         continue;
       }
 
-      const rounds = Array.isArray(
-        tournament.rounds
-      )
-        ? tournament.rounds
-        : [];
+      const rounds =
+        Array.isArray(
+          tournament.rounds
+        )
+          ? tournament.rounds
+          : [];
 
       if (rounds.length === 0) {
         continue;
       }
 
       const latestRound =
-        rounds[rounds.length - 1];
+        rounds[
+          rounds.length - 1
+        ];
 
-      const roundStart = new Date(
-        latestRound.startAt
-      );
+      const roundStart =
+        new Date(
+          latestRound.startAt
+        );
 
       if (
         Number.isNaN(
@@ -88,7 +244,8 @@ export async function GET() {
         new Date(roundStart);
 
       threeDaysBefore.setDate(
-        threeDaysBefore.getDate() - 3
+        threeDaysBefore.getDate() -
+          3
       );
 
       if (
@@ -116,17 +273,24 @@ export async function GET() {
           },
         });
 
-        tournament.status = "UPCOMING";
+        tournament.status =
+          "UPCOMING";
+
         tournament.startAt =
           latestRound.startAt;
+
         tournament.endAt =
           latestRound.endAt;
+
         tournament.slotNumber =
           latestRound.slotNumber;
+
         tournament.pointSystem =
           latestRound.pointSystem;
+
         tournament.roomId =
           latestRound.roomId;
+
         tournament.roomPassword =
           latestRound.roomPassword;
       }
@@ -157,19 +321,25 @@ export async function POST(
   request: Request
 ) {
   try {
-    const session = await getSession();
+    const session =
+      await getSession();
 
     if (!session) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication required.",
+          error:
+            "Authentication required.",
         },
         { status: 401 }
       );
     }
 
-    if (!canManage(session.roles)) {
+    if (
+      !canManage(
+        session.roles
+      )
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -184,7 +354,8 @@ export async function POST(
       (await request.json()) as CreateTournamentBody;
 
     const name =
-      typeof body.name === "string"
+      typeof body.name ===
+      "string"
         ? body.name.trim()
         : "";
 
@@ -199,22 +370,24 @@ export async function POST(
       );
     }
 
+    /*
+     * IMPORTANT:
+     * Interpret form values as IST.
+     */
     const startAt =
-      typeof body.startAt === "string"
-        ? new Date(body.startAt)
-        : null;
+      parseIndiaDate(
+        body.startAt
+      );
 
     const endAt =
-      typeof body.endAt === "string" &&
-      body.endAt.length > 0
-        ? new Date(body.endAt)
+      body.endAt
+        ? parseIndiaDate(
+            body.endAt
+          )
         : null;
 
     if (
-      !startAt ||
-      Number.isNaN(
-        startAt.getTime()
-      )
+      !isValidDate(startAt)
     ) {
       return NextResponse.json(
         {
@@ -227,10 +400,8 @@ export async function POST(
     }
 
     if (
-      endAt &&
-      Number.isNaN(
-        endAt.getTime()
-      )
+      body.endAt &&
+      !isValidDate(endAt)
     ) {
       return NextResponse.json(
         {
@@ -257,33 +428,45 @@ export async function POST(
     }
 
     const organizer =
-      typeof body.organizer === "string"
-        ? body.organizer.trim() || null
+      typeof body.organizer ===
+      "string"
+        ? body.organizer.trim() ||
+          null
         : null;
 
     const description =
-      typeof body.description === "string"
-        ? body.description.trim() || null
+      typeof body.description ===
+      "string"
+        ? body.description.trim() ||
+          null
         : null;
 
     const slotNumber =
-      typeof body.slotNumber === "string"
-        ? body.slotNumber.trim() || null
+      typeof body.slotNumber ===
+      "string"
+        ? body.slotNumber.trim() ||
+          null
         : null;
 
     const pointSystem =
-      typeof body.pointSystem === "string"
-        ? body.pointSystem.trim() || null
+      typeof body.pointSystem ===
+      "string"
+        ? body.pointSystem.trim() ||
+          null
         : null;
 
     const roomId =
-      typeof body.roomId === "string"
-        ? body.roomId.trim() || null
+      typeof body.roomId ===
+      "string"
+        ? body.roomId.trim() ||
+          null
         : null;
 
     const roomPassword =
-      typeof body.roomPassword === "string"
-        ? body.roomPassword.trim() || null
+      typeof body.roomPassword ===
+      "string"
+        ? body.roomPassword.trim() ||
+          null
         : null;
 
     const tournament =
@@ -297,7 +480,8 @@ export async function POST(
                 name,
                 organizer,
                 description,
-                status: "UPCOMING",
+                status:
+                  "UPCOMING",
                 startAt,
                 endAt,
                 slotNumber,
@@ -322,18 +506,21 @@ export async function POST(
             },
           });
 
-          return tx.tournament.findUnique({
-            where: {
-              id: created.id,
-            },
-            include: {
-              rounds: {
-                orderBy: {
-                  roundNumber: "asc",
+          return tx.tournament.findUnique(
+            {
+              where: {
+                id: created.id,
+              },
+              include: {
+                rounds: {
+                  orderBy: {
+                    roundNumber:
+                      "asc",
+                  },
                 },
               },
-            },
-          });
+            }
+          );
         }
       );
 

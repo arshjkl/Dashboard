@@ -2249,60 +2249,79 @@ function LoadingState() {
 /* DATE */
 /* ================================================== */
 
-function formatDate(
-  value: string
-) {
+function formatDate(value: string) {
   const date = new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
+  if (Number.isNaN(date.getTime())) {
     return "—";
   }
 
-  return new Intl.DateTimeFormat(
-    "en-IN",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  ).format(date);
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
 }
-
 /* ================================================== */
 /* DATETIME LOCAL */
 /* ================================================== */
 
-function toDateTimeLocal(
-  value: string
-) {
+function toDateTimeLocal(value: string) {
   const date = new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
+  if (Number.isNaN(date.getTime())) {
     return "";
   }
 
-  const pad = (number: number) =>
-    number
-      .toString()
-      .padStart(2, "0");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
 
-  return `${date.getFullYear()}-${pad(
-    date.getMonth() + 1
-  )}-${pad(
-    date.getDate()
-  )}T${pad(
-    date.getHours()
-  )}:${pad(
-    date.getMinutes()
-  )}`;
+  const get = (type: string) =>
+    parts.find((part) => part.type === type)?.value || "";
+
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
+function parseIndiaDateTime(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, hour, minute] = match;
+
+  return new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute)
+    ) -
+      330 * 60 * 1000
+  );
+}
+
+function compareIndiaDateTime(value: string) {
+  const date = parseIndiaDateTime(value);
+
+  return date ? date.getTime() : NaN;
+}
+
