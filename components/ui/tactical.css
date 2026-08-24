@@ -1,0 +1,610 @@
+/* =========================================================
+   BGMI ARENA — GLOBAL TACTICAL DESIGN SYSTEM
+========================================================= */
+
+:root {
+  --t-bg: #070707;
+  --t-bg-deep: #040404;
+  --t-surface: #0d0d0d;
+  --t-surface-2: #111111;
+
+  --t-border: rgba(255, 255, 255, 0.08);
+  --t-border-strong: rgba(255, 255, 255, 0.14);
+
+  --t-gold: #f59e0b;
+  --t-gold-light: #fbbf24;
+  --t-gold-dark: #b45309;
+
+  --t-green: #22c55e;
+  --t-red: #ef4444;
+
+  --t-text: #f5f5f5;
+  --t-muted: #737373;
+  --t-dim: #404040;
+
+  --t-radius: 14px;
+}
+
+/* =========================================================
+   GLOBAL APPLICATION
+========================================================= */
+
+.tactical-app {
+  min-height: 100vh !important;
+
+  background:
+    radial-gradient(
+      circle at 85% 0%,
+      rgba(245, 158, 11, 0.055),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 0% 100%,
+      rgba(245, 158, 11, 0.025),
+      transparent 30%
+    ),
+    var(--t-bg) !important;
+
+  color: var(--t-text) !important;
+}
+
+/* =========================================================
+   GRID / HUD BACKGROUND
+========================================================= */
+
+.tactical-app::before {
+  content: "";
+
+  position: fixed;
+  inset: 0;
+
+  pointer-events: none;
+
+  z-index: 0;
+
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.016) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.016) 1px,
+      transparent 1px
+    );
+
+  background-size: 44px 44px;
+
+  mask-image: linear-gradient(
+    to bottom,
+    black,
+    transparent 90%
+  );
+}
+
+/* Keep actual content above HUD */
+
+.tactical-app > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================================
+   GLOBAL BACKGROUND NORMALIZATION
+========================================================= */
+
+.tactical-app [class*="bg-[#02070b]"],
+.tactical-app [class*="bg-[#080a0c]"],
+.tactical-app [class*="bg-[#04090e]"],
+.tactical-app [class*="bg-[#101316]"] {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.035),
+      rgba(255, 255, 255, 0.012)
+    ) !important;
+
+  background-color: var(--t-bg) !important;
+}
+
+/* =========================================================
+   OLD GREEN → GOLD
+========================================================= */
+
+.tactical-app [class*="text-green-"] {
+  color: var(--t-gold-light) !important;
+}
+
+.tactical-app [class*="bg-green-"] {
+  background-color: rgba(
+    245,
+    158,
+    11,
+    0.09
+  ) !important;
+}
+
+.tactical-app [class*="border-green-"] {
+  border-color: rgba(
+    245,
+    158,
+    11,
+    0.22
+  ) !important;
+}
+
+/* Preserve actual success indicators */
+
+.tactical-app .tactical-success {
+  color: var(--t-green) !important;
+}
+
+/* =========================================================
+   OLD BLUE / CYAN / SKY / INDIGO → GOLD
+========================================================= */
+
+.tactical-app [class*="text-blue-"],
+.tactical-app [class*="text-cyan-"],
+.tactical-app [class*="text-sky-"],
+.tactical-app [class*="text-indigo-"] {
+  color: var(--t-gold-light) !important;
+}
+
+.tactical-app [class*="bg-blue-"],
+.tactical-app [class*="bg-cyan-"],
+.tactical-app [class*="bg-sky-"],
+.tactical-app [class*="bg-indigo-"] {
+  background-color: rgba(
+    245,
+    158,
+    11,
+    0.08
+  ) !important;
+}
+
+.tactical-app [class*="border-blue-"],
+.tactical-app [class*="border-cyan-"],
+.tactical-app [class*="border-sky-"],
+.tactical-app [class*="border-indigo-"] {
+  border-color: rgba(
+    245,
+    158,
+    11,
+    0.22
+  ) !important;
+}
+
+/* =========================================================
+   PANELS
+========================================================= */
+
+.tactical-panel {
+  position: relative;
+
+  overflow: hidden;
+
+  border: 1px solid var(--t-border) !important;
+
+  border-radius: var(--t-radius) !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.012)
+    ) !important;
+
+  box-shadow:
+    0 14px 45px rgba(0, 0, 0, 0.3),
+    inset 0 1px rgba(255, 255, 255, 0.025);
+
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.tactical-panel:hover {
+  border-color: rgba(
+    245,
+    158,
+    11,
+    0.2
+  ) !important;
+}
+
+/* =========================================================
+   COMMON EXISTING CARD PATTERN
+========================================================= */
+
+.tactical-app
+  [class*="rounded-2xl"][class*="border"][class*="bg-white/"] {
+  border-color: var(--t-border) !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.012)
+    ) !important;
+
+  border-radius: var(--t-radius) !important;
+}
+
+/* =========================================================
+   EXISTING 3XL CARDS
+========================================================= */
+
+.tactical-app
+  [class*="rounded-3xl"][class*="border"] {
+  border-color: var(--t-border) !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.012)
+    ) !important;
+}
+
+/* =========================================================
+   HEADINGS
+========================================================= */
+
+.tactical-app h1,
+.tactical-app h2,
+.tactical-app h3 {
+  color: #fafafa;
+}
+
+/* =========================================================
+   LABELS
+========================================================= */
+
+.tactical-label {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+
+  font-size: 8px;
+
+  font-weight: 900;
+
+  letter-spacing: 0.25em;
+
+  text-transform: uppercase;
+
+  color: var(--t-gold-light);
+}
+
+.tactical-label-muted {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+
+  font-size: 8px;
+
+  font-weight: 900;
+
+  letter-spacing: 0.2em;
+
+  text-transform: uppercase;
+
+  color: var(--t-dim);
+}
+
+/* =========================================================
+   TITLE
+========================================================= */
+
+.tactical-title {
+  margin-top: 8px;
+
+  font-size: clamp(
+    28px,
+    4vw,
+    46px
+  );
+
+  line-height: 0.95;
+
+  font-weight: 950;
+
+  letter-spacing: -0.045em;
+
+  text-transform: uppercase;
+
+  color: white;
+
+  text-shadow:
+    0 0 35px rgba(
+      245,
+      158,
+      11,
+      0.08
+    );
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.tactical-button {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  min-height: 42px;
+
+  padding: 10px 17px;
+
+  border: 1px solid rgba(
+    245,
+    158,
+    11,
+    0.3
+  ) !important;
+
+  border-radius: 9px;
+
+  background: rgba(
+    245,
+    158,
+    11,
+    0.09
+  ) !important;
+
+  color: var(--t-gold-light) !important;
+
+  font-size: 9px;
+
+  font-weight: 900;
+
+  letter-spacing: 0.14em;
+
+  text-transform: uppercase;
+
+  transition: all 150ms ease;
+}
+
+.tactical-button:hover {
+  border-color: rgba(
+    245,
+    158,
+    11,
+    0.6
+  ) !important;
+
+  background: rgba(
+    245,
+    158,
+    11,
+    0.16
+  ) !important;
+
+  transform: translateY(-1px);
+}
+
+.tactical-button-danger {
+  border-color: rgba(
+    239,
+    68,
+    68,
+    0.3
+  ) !important;
+
+  background: rgba(
+    239,
+    68,
+    68,
+    0.07
+  ) !important;
+
+  color: #f87171 !important;
+}
+
+/* =========================================================
+   EXISTING AMBER BUTTONS
+========================================================= */
+
+.tactical-app
+  [class*="bg-amber-400"] {
+  background: linear-gradient(
+    135deg,
+    #fbbf24,
+    #d97706
+  ) !important;
+
+  color: #090909 !important;
+
+  box-shadow:
+    0 6px 25px rgba(
+      245,
+      158,
+      11,
+      0.14
+    );
+}
+
+.tactical-app
+  [class*="bg-amber-400"]:hover {
+  background: linear-gradient(
+    135deg,
+    #fcd34d,
+    #f59e0b
+  ) !important;
+}
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+.tactical-app input,
+.tactical-app textarea,
+.tactical-app select {
+  border-color: rgba(
+    255,
+    255,
+    255,
+    0.09
+  ) !important;
+
+  background: #090909 !important;
+
+  color: #f5f5f5 !important;
+
+  border-radius: 9px !important;
+}
+
+.tactical-app input:focus,
+.tactical-app textarea:focus,
+.tactical-app select:focus {
+  border-color: rgba(
+    245,
+    158,
+    11,
+    0.5
+  ) !important;
+
+  box-shadow:
+    0 0 0 3px rgba(
+      245,
+      158,
+      11,
+      0.07
+    ) !important;
+}
+
+.tactical-app input::placeholder,
+.tactical-app textarea::placeholder {
+  color: #3f3f3f !important;
+}
+
+/* =========================================================
+   ERROR / SUCCESS
+========================================================= */
+
+.tactical-app
+  [class*="border-red-400"] {
+  border-color: rgba(
+    239,
+    68,
+    68,
+    0.2
+  ) !important;
+}
+
+.tactical-app
+  [class*="bg-red-400"] {
+  background-color: rgba(
+    239,
+    68,
+    68,
+    0.07
+  ) !important;
+}
+
+/* =========================================================
+   MODALS
+========================================================= */
+
+.tactical-app
+  [class*="fixed"][class*="inset-0"][class*="z-50"] {
+  background: rgba(
+    0,
+    0,
+    0,
+    0.88
+  ) !important;
+
+  backdrop-filter: blur(12px);
+}
+
+/* =========================================================
+   TABLES
+========================================================= */
+
+.tactical-app table {
+  border-color: var(--t-border) !important;
+}
+
+.tactical-app th {
+  color: #737373 !important;
+
+  font-family: monospace;
+
+  font-size: 8px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.15em;
+}
+
+.tactical-app td {
+  border-color: var(--t-border) !important;
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+.tactical-app,
+.tactical-app * {
+  scrollbar-width: thin;
+
+  scrollbar-color:
+    #292929
+    #070707;
+}
+
+.tactical-app *::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.tactical-app *::-webkit-scrollbar-track {
+  background: #070707;
+}
+
+.tactical-app *::-webkit-scrollbar-thumb {
+  background: #292929;
+
+  border-radius: 999px;
+}
+
+.tactical-app *::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 1023px) {
+  .tactical-title {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  .tactical-title {
+    font-size: 27px;
+  }
+
+  .tactical-panel {
+    border-radius: 11px !important;
+  }
+
+  .tactical-button {
+    min-height: 44px;
+  }
+}

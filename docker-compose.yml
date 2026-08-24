@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: bgmi-esports-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bgmi_admin
+      POSTGRES_PASSWORD: bgmi_password
+      POSTGRES_DB: bgmi_dashboard
+    ports:
+      - "5432:5432"
+    volumes:
+      - bgmi_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bgmi_admin -d bgmi_dashboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bgmi_postgres_data:
